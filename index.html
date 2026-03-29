@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UTM - Archives Numériques</title>
+
+    <!-- ✅ SUPABASE JS CDN (remplace tous les imports Firebase) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+      :root {
+        --primary-color: #0056b3;
+        --accent-color: #d32f2f;
+        --bg-image: url("./20240412_105745_7-ok-popincourt-et-une.webp");
+        --text-color: #333333;
+        --glass-bg: rgba(255, 255, 255, 0.75);
+        --glass-border: 1px solid rgba(255, 255, 255, 0.9);
+        --input-bg: rgba(255, 255, 255, 0.9);
+      }
+
+      [data-theme="dark"] {
+        --primary-color: #4dabf5;
+        --accent-color: #ff5252;
+        --bg-image: url("./Accueil.jpg");
+        --text-color: #ffffff;
+        --glass-bg: rgba(0, 0, 0, 0.75);
+        --glass-border: 1px solid rgba(255, 255, 255, 0.2);
+        --input-bg: rgba(50, 50, 50, 0.9);
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-image: var(--bg-image);
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        color: var(--text-color);
+        transition: background-image 0.5s ease;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .glass-panel {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 15px;
+        border: var(--glass-border);
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      h1, h2, h3 {
+        color: var(--primary-color);
+        text-align: center;
+      }
+
+      label {
+        display: block;
+        margin-top: 10px;
+        font-weight: bold;
+      }
+
+      input, select, button {
+        width: 100%;
+        padding: 12px;
+        margin-top: 5px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+        font-size: 16px;
+        background-color: var(--input-bg);
+        color: var(--text-color);
+      }
+
+      button {
+        background-color: var(--primary-color);
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        border: none;
+        transition: transform 0.2s;
+        margin-top: 20px;
+      }
+
+      button:hover {
+        opacity: 0.9;
+        transform: scale(1.02);
+      }
+
+      .btn-secondary {
+        background-color: var(--accent-color);
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: auto;
+        padding: 10px 20px;
+        z-index: 1000;
+      }
+
+      .doc-item {
+        border-bottom: 1px solid var(--text-color);
+        padding: 15px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .progress-bar {
+        width: 100%;
+        background-color: #e0e0e0;
+        border-radius: 5px;
+        margin-top: 10px;
+        height: 20px;
+        overflow: hidden;
+        display: none;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background-color: var(--primary-color);
+        width: 0%;
+        transition: width 0.3s;
+        text-align: center;
+        color: white;
+        font-size: 12px;
+      }
+
+      /* Toast notification */
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(80px);
+        background: #1e293b;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-size: 14px;
+        z-index: 9999;
+        opacity: 0;
+        transition: all 0.35s ease;
+        pointer-events: none;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+      .toast.success { border-left: 4px solid #22c55e; }
+      .toast.error   { border-left: 4px solid #ef4444; }
+      .toast.info    { border-left: 4px solid #3b82f6; }
+    </style>
+  </head>
+
+  <body>
+    <div id="toast" class="toast"></div>
+    <button id="themeBtn" class="theme-toggle">Changer Thème</button>
+
+    <!-- ===== PAGE LOGIN ===== -->
+    <div id="login-page" class="container">
+      <div class="glass-panel" style="max-width: 500px; margin: 100px auto">
+        <h1>UTM Archives</h1>
+        <h2>Connexion Étudiant</h2>
+        <form id="loginForm">
+          <label>Nom</label>
+          <input type="text" id="nom" required placeholder="Votre nom" />
+          <label>Prénom</label>
+          <input type="text" id="prenom" required placeholder="Votre prénom" />
+          <label>Filière</label>
+          <select id="loginFiliere" required>
+            <option value="">Choisir...</option>
+            <option value="Génie Logiciel">Génie Logiciel</option>
+            <option value="Réseaux et télécoms">Réseaux et télécoms</option>
+            <option value="Maintenance Industrielle">Maintenance Industrielle</option>
+            <option value="Génie Mécanique et Productique">Génie Mécanique et Productique</option>
+            <option value="Electrotechnique">Electrotechnique</option>
+            <option value="Electronique et Info Ind.">Electronique et Info Ind.</option>
+            <option value="BTP">Bâtiment et travaux publics</option>
+            <option value="Economie et Statistique">Economie et statistique appliquée</option>
+            <option value="Transport et logistique">Transport et logistique</option>
+            <option value="Finance comptabilité">Finance comptabilité</option>
+          </select>
+          <label>N° Carte Étudiant (4 chiffres)</label>
+          <input type="text" id="studentId" required pattern="[0-9]{4}" maxlength="4" placeholder="Ex: 1234" />
+          <small>Admin : code spécial ici.</small>
+          <button type="submit">Se connecter</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== PAGE RECHERCHE ===== -->
+    <div id="search-page" class="container hidden">
+      <div class="glass-panel">
+        <div style="display: flex; justify-content: space-between">
+          <h2>Recherche de Documents</h2>
+          <button onclick="logout()" class="btn-secondary" style="width: auto">Déconnexion</button>
+        </div>
+        <form id="searchForm">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px">
+            <div>
+              <label>Filière *</label>
+              <select id="searchFiliere" required>
+                <option value="Génie Logiciel">Génie Logiciel</option>
+                <option value="Réseaux et télécoms">Réseaux et télécoms</option>
+                <option value="Maintenance Industrielle">Maintenance Industrielle</option>
+                <option value="Génie Mécanique et Productique">Génie Mécanique et Productique</option>
+                <option value="Electrotechnique">Electrotechnique</option>
+                <option value="Electronique et Info Ind.">Electronique et Info Ind.</option>
+                <option value="BTP">Bâtiment et travaux publics</option>
+                <option value="Economie et Statistique">Economie et statistique appliquée</option>
+                <option value="Transport et logistique">Transport et logistique</option>
+                <option value="Finance comptabilité">Finance comptabilité</option>
+              </select>
+            </div>
+            <div>
+              <label>Niveau *</label>
+              <select id="searchNiveau" required>
+                <option value="Licence 1">Licence 1</option>
+                <option value="Licence 2">Licence 2</option>
+                <option value="Licence 3">Licence 3</option>
+                <option value="Master 1">Master 1</option>
+                <option value="Master 2">Master 2</option>
+              </select>
+            </div>
+            <div>
+              <label>Type *</label>
+              <select id="searchType" required>
+                <option value="Support de cours">Support de cours</option>
+                <option value="Sujet">Sujet</option>
+                <option value="Travaux dirigés">Travaux dirigés</option>
+                <option value="Travaux pratiques">Travaux pratiques</option>
+                <option value="Session">Session</option>
+              </select>
+            </div>
+            <div>
+              <label>Année Univ.</label>
+              <select id="searchAnnee">
+                <option value="">Toutes</option>
+              </select>
+            </div>
+            <div>
+              <label>Module</label>
+              <input type="text" id="searchModule" placeholder="Nom du module" />
+            </div>
+          </div>
+          <button type="submit">Rechercher</button>
+        </form>
+      </div>
+
+      <div style="margin-top: 20px; padding: 15px; background: rgba(37, 211, 102, 0.1); border-radius: 15px; border: 1px solid #25d366; text-align: center; font-size: 12px;">
+        📤 <strong>Envoyer une correction aux admins :</strong><br /><br />
+        <a href="https://wa.me/qr/WQDLW5IVUPRKE1" target="_blank" style="color: #25d366; font-weight: bold; margin: 0 5px">Baggnan S.</a> |
+        <a href="https://wa.me/qr/T3ZOGMWKJKNOA1" target="_blank" style="color: #25d366; font-weight: bold; margin: 0 5px">Kagambega G.</a> |
+        <a href="https://wa.me/message/PPBAOJM7IVFHF1" target="_blank" style="color: #25d366; font-weight: bold; margin: 0 5px">Yameogo S.</a>
+      </div>
+
+      <div id="searchResults" class="glass-panel">
+        <h3>Résultats</h3>
+        <div id="resultsList"></div>
+      </div>
+    </div>
+
+    <!-- ===== PAGE ADMIN ===== -->
+    <div id="admin-page" class="container hidden">
+      <div class="glass-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <h2>Espace Administrateur</h2>
+          <div>
+            <button onclick="toggleDeleteHistory()" style="width: auto; margin-right: 10px">Corbeille</button>
+            <button onclick="quitAdmin()" class="btn-secondary" style="width: auto">Quitter Admin</button>
+          </div>
+        </div>
+
+        <h3>Ajouter des documents</h3>
+        <div class="glass-panel" style="background: rgba(0,0,0,0.05)">
+          <input type="file" id="fileInput" multiple />
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+            <div>
+              <label>Filières (Maintenir Ctrl pour plusieurs)</label>
+              <select id="adminFilieres" multiple required style="height: 100px">
+                <option value="Génie Logiciel">Génie Logiciel</option>
+                <option value="Réseaux et télécoms">Réseaux et télécoms</option>
+                <option value="Maintenance Industrielle">Maintenance Industrielle</option>
+                <option value="Génie Mécanique et Productique">Génie Mécanique et Productique</option>
+                <option value="Electrotechnique">Electrotechnique</option>
+                <option value="Electronique et Info Ind.">Electronique et Info Ind.</option>
+                <option value="BTP">Bâtiment et travaux publics</option>
+                <option value="Economie et Statistique">Economie et statistique appliquée</option>
+                <option value="Transport et logistique">Transport et logistique</option>
+                <option value="Finance comptabilité">Finance comptabilité</option>
+              </select>
+            </div>
+            <div>
+              <label>Niveau</label>
+              <select id="adminNiveau">
+                <option value="Licence 1">Licence 1</option>
+                <option value="Licence 2">Licence 2</option>
+                <option value="Licence 3">Licence 3</option>
+                <option value="Master 1">Master 1</option>
+                <option value="Master 2">Master 2</option>
+              </select>
+              <label>Type</label>
+              <select id="adminType">
+                <option value="Support de cours">Support de cours</option>
+                <option value="Sujet">Sujet</option>
+                <option value="Travaux dirigés">Travaux dirigés</option>
+                <option value="Travaux pratiques">Travaux pratiques</option>
+                <option value="Session">Session</option>
+              </select>
+            </div>
+          </div>
+          <label>Nom du Module</label>
+          <input type="text" id="adminModule" placeholder="Ex: Algorithmique" />
+          <label>Année Universitaire</label>
+          <input type="text" id="adminAnnee" placeholder="Ex: 2023-2024" />
+          <button onclick="uploadFiles()">Uploader les fichiers</button>
+          <div id="uploadProgress" class="progress-bar">
+            <div id="progressBarFill" class="progress-fill">0%</div>
+          </div>
+        </div>
+
+        <h3>Configuration Site</h3>
+        <div class="glass-panel" style="background: rgba(0,0,0,0.05)">
+          <label>Changer le fond d'écran (Local)</label>
+          <input type="file" id="bgInput" accept="image/*" />
+          <button onclick="changeBackground()">Appliquer le fond</button>
+        </div>
+
+        <h3>Historique des connexions</h3>
+        <button onclick="clearLoginHistory()" class="btn-secondary" style="width: auto; margin-bottom: 10px">Effacer l'historique</button>
+        <div id="loginHistoryList" style="max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;"></div>
+
+        <h3>Gestion des fichiers en ligne</h3>
+        <div id="adminFileList"></div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL CORBEILLE ===== -->
+    <div id="trashModal" class="glass-panel hidden" style="position: fixed; top: 10%; left: 10%; right: 10%; z-index: 2000; background-color: var(--input-bg);">
+      <h3>Corbeille (20 derniers supprimés)</h3>
+      <button onclick="toggleDeleteHistory()" class="btn-secondary">Fermer</button>
+      <div id="trashList"></div>
+    </div>
+
+    <script>
+      // ============================================================
+      // ✅ CONFIGURATION SUPABASE
+      // Remplacez les deux valeurs ci-dessous par celles de votre projet
+      // Dashboard Supabase → Settings → API
+      // ============================================================
+      const SUPABASE_URL  = "https://koqypqncpaiwivbzdayd.supabase.co";
+      const SUPABASE_ANON = "sb_publishable_tJzBF2337BWiYQ-WZ5XvXQ_BR3jRS8j";
+
+      // Initialisation du client Supabase (équivalent à initializeApp de Firebase)
+      const { createClient } = supabase;
+      const db = createClient(SUPABASE_URL, SUPABASE_ANON);
+      // ^ db.from() remplace ref(db, ...) de Firebase
+      // ^ db.storage remplace getStorage(app) de Firebase
+
+      // ============================================================
+      // UTILITAIRE : Toast de notification (remplace alert())
+      // ============================================================
+      function showToast(message, type = "info") {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove("show"), 3500);
+      }
+
+      // ============================================================
+      // GESTION DU THÈME (inchangé, aucun lien Firebase)
+      // ============================================================
+      let isDarkMode = false;
+      document.getElementById("themeBtn").addEventListener("click", () => {
+        isDarkMode = !isDarkMode;
+        document.body.setAttribute("data-theme", isDarkMode ? "dark" : "light");
+      });
+
+      // ============================================================
+      // NAVIGATION
+      // ============================================================
+      function showPage(pageId) {
+        ["login-page", "search-page", "admin-page"].forEach(id => {
+          document.getElementById(id).classList.add("hidden");
+        });
+        document.getElementById(pageId).classList.remove("hidden");
+      }
+
+      // ============================================================
+      // LOGIN
+      // Remplace : push(ref(db, 'login_history'), loginData)
+      // Par      : db.from('login_history').insert(loginData)
+      // ============================================================
+      document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const nom       = document.getElementById("nom").value.trim();
+        const prenom    = document.getElementById("prenom").value.trim();
+        const filiere   = document.getElementById("loginFiliere").value;
+        const studentId = document.getElementById("studentId").value;
+
+        // Vérification Admin (code 1596 — inchangé)
+        if (studentId === "1596") {
+          showPage("admin-page");
+          loadLoginHistory();
+          loadAdminFiles();
+          showToast("Mode Administrateur activé.", "success");
+          return;
+        }
+
+        // ✅ Insertion dans Supabase (remplace push Firebase)
+        const { error } = await db.from("login_history").insert({
+          nom,
+          prenom,
+          filiere,
+          student_id: studentId
+          // created_at est automatique (DEFAULT now() en SQL)
+        });
+
+        if (error) {
+          showToast("Erreur de connexion : " + error.message, "error");
+          return;
+        }
+
+        showPage("search-page");
+        loadUniqueYears();
+      });
+
+      // ============================================================
+      // DÉCONNEXION
+      // ============================================================
+      function logout() {
+        showPage("login-page");
+      }
+
+      // ============================================================
+      // QUITTER ADMIN
+      // ============================================================
+      function quitAdmin() {
+        showPage("search-page");
+        loadUniqueYears();
+      }
+
+      // ============================================================
+      // CHANGER FOND D'ÉCRAN (local, aucun lien base de données)
+      // ============================================================
+      function changeBackground() {
+        const file = document.getElementById("bgInput").files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            document.documentElement.style.setProperty("--bg-image", `url(${e.target.result})`);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+
+      // ============================================================
+      // UPLOAD DE FICHIERS
+      // Remplace : uploadBytes(storageRef, file) + set(ref(db,'documents/...'), docData)
+      // Par      : db.storage.from('documents').upload() + db.from('documents').insert()
+      // ============================================================
+      async function uploadFiles() {
+        const files = document.getElementById("fileInput").files;
+        if (files.length === 0) { showToast("Aucun fichier sélectionné.", "error"); return; }
+
+        const filiereOptions = document.getElementById("adminFilieres").selectedOptions;
+        const filieres       = Array.from(filiereOptions).map(opt => opt.value);
+        const niveau         = document.getElementById("adminNiveau").value;
+        const type           = document.getElementById("adminType").value;
+        const moduleName     = document.getElementById("adminModule").value.trim();
+        const annee          = document.getElementById("adminAnnee").value.trim();
+
+        if (!moduleName || !annee || filieres.length === 0) {
+          showToast("Remplissez tous les critères.", "error");
+          return;
+        }
+
+        const progressBar  = document.getElementById("uploadProgress");
+        const progressFill = document.getElementById("progressBarFill");
+        progressBar.style.display = "block";
+
+        for (let i = 0; i < files.length; i++) {
+          const file        = files[i];
+          const storagePath = `documents/${Date.now()}_${file.name}`;  // Chemin unique dans le bucket
+
+          // Mise à jour barre de progression
+          const pct = Math.round(((i) / files.length) * 100);
+          progressFill.style.width = pct + "%";
+          progressFill.textContent = `Envoi ${i + 1}/${files.length}...`;
+
+          // ✅ ÉTAPE 1 : Upload dans Supabase Storage (remplace uploadBytes Firebase)
+          const { data: storageData, error: storageError } = await db.storage
+            .from("documents")
+            .upload(storagePath, file, { upsert: false });
+
+          if (storageError) {
+            showToast(`Erreur fichier "${file.name}" : ${storageError.message}`, "error");
+            continue; // Passe au fichier suivant
+          }
+
+          // ✅ ÉTAPE 2 : Récupérer l'URL publique (remplace getDownloadURL Firebase)
+          const { data: urlData } = db.storage
+            .from("documents")
+            .getPublicUrl(storageData.path);
+
+          const downloadURL = urlData.publicUrl;
+
+          // ✅ ÉTAPE 3 : Enregistrer les métadonnées dans la table (remplace set Firebase)
+          const { error: dbError } = await db.from("documents").insert({
+            name:         file.name,
+            url:          downloadURL,
+            storage_path: storageData.path,  // Champ supplémentaire utile pour la suppression
+            filieres:     filieres,           // text[] PostgreSQL, directement un tableau JS
+            niveau,
+            type,
+            module:       moduleName,
+            annee
+          });
+
+          if (dbError) {
+            showToast(`Erreur base de données pour "${file.name}" : ${dbError.message}`, "error");
+          }
+        }
+
+        progressFill.style.width  = "100%";
+        progressFill.textContent  = "Terminé !";
+        showToast("Tous les fichiers ont été envoyés avec succès !", "success");
+        loadAdminFiles();
+      }
+
+      // ============================================================
+      // CHARGER FICHIERS ADMIN (liste + boutons modifier/supprimer)
+      // Remplace : onValue(ref(db, 'documents'), callback)
+      // Par      : db.from('documents').select('*').order('created_at', {ascending: false})
+      // ============================================================
+      async function loadAdminFiles() {
+        const listDiv = document.getElementById("adminFileList");
+        listDiv.innerHTML = "Chargement...";
+
+        // ✅ Requête Supabase (lecture unique, tri par date décroissante)
+        const { data, error } = await db
+          .from("documents")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        listDiv.innerHTML = "";
+
+        if (error) { listDiv.innerHTML = "Erreur : " + error.message; return; }
+
+        if (!data || data.length === 0) {
+          listDiv.innerHTML = "Aucun document.";
+          return;
+        }
+
+        data.forEach(doc => {
+          const div = document.createElement("div");
+          div.className = "doc-item";
+          div.innerHTML = `
+            <span><strong>${doc.module}</strong> (${doc.type}) - ${doc.name}</span>
+            <div>
+              <button onclick="editDoc('${doc.id}')" style="width:auto; padding:5px;">Modifier</button>
+              <button onclick="deleteDoc('${doc.id}', '${doc.storage_path}')" style="width:auto; padding:5px; background:red;">Supprimer</button>
+            </div>
+          `;
+          listDiv.appendChild(div);
+        });
+      }
+
+      // ============================================================
+      // SUPPRIMER DOCUMENT (soft delete → corbeille)
+      // Remplace : onValue + push(deleted_documents) + remove(docRef)
+      // Par      : SELECT + INSERT dans deleted_documents + DELETE depuis documents
+      //            + deleteObject dans Storage
+      // ============================================================
+      async function deleteDoc(id, storagePath) {
+        if (!confirm("Supprimer ce fichier ?")) return;
+
+        // ✅ ÉTAPE 1 : Lire le document à supprimer
+        const { data: doc, error: readError } = await db
+          .from("documents")
+          .select("*")
+          .eq("id", id)
+          .single();
+
+        if (readError || !doc) { showToast("Document introuvable.", "error"); return; }
+
+        // ✅ ÉTAPE 2 : Copier vers la corbeille
+        const { error: trashError } = await db.from("deleted_documents").insert({
+          original_id:  doc.id,
+          name:         doc.name,
+          url:          doc.url,
+          storage_path: doc.storage_path,
+          filieres:     doc.filieres,
+          niveau:       doc.niveau,
+          type:         doc.type,
+          module:       doc.module,
+          annee:        doc.annee
+        });
+
+        if (trashError) { showToast("Erreur corbeille : " + trashError.message, "error"); return; }
+
+        // ✅ ÉTAPE 3 : Supprimer de la table principale
+        await db.from("documents").delete().eq("id", id);
+
+        // ✅ ÉTAPE 4 : Supprimer le fichier physique du Storage (optionnel mais propre)
+        if (storagePath) {
+          await db.storage.from("documents").remove([storagePath]);
+        }
+
+        showToast("Document déplacé dans la corbeille.", "info");
+        loadAdminFiles();
+      }
+
+      // ============================================================
+      // MODIFIER DOCUMENT (nom du module uniquement)
+      // Remplace : update(ref(db, 'documents/' + key), { module: newModule })
+      // Par      : db.from('documents').update({module}).eq('id', id)
+      // ============================================================
+      async function editDoc(id) {
+        const newModule = prompt("Nouveau nom du module ?");
+        if (!newModule) return;
+
+        const { error } = await db
+          .from("documents")
+          .update({ module: newModule })
+          .eq("id", id);
+
+        if (error) showToast("Erreur modification : " + error.message, "error");
+        else { showToast("Module mis à jour.", "success"); loadAdminFiles(); }
+      }
+
+      // ============================================================
+      // CORBEILLE : toggle, restaurer
+      // ============================================================
+      async function toggleDeleteHistory() {
+        const modal = document.getElementById("trashModal");
+        modal.classList.toggle("hidden");
+
+        if (!modal.classList.contains("hidden")) {
+          const list = document.getElementById("trashList");
+          list.innerHTML = "Chargement...";
+
+          // ✅ Récupérer les 20 derniers supprimés (remplace limitToLast Firebase)
+          const { data, error } = await db
+            .from("deleted_documents")
+            .select("*")
+            .order("deleted_at", { ascending: false })
+            .limit(20);
+
+          list.innerHTML = "";
+          if (error) { list.innerHTML = "Erreur : " + error.message; return; }
+
+          if (!data || data.length === 0) {
+            list.innerHTML = "Corbeille vide.";
+            return;
+          }
+
+          data.forEach(doc => {
+            const div = document.createElement("div");
+            div.className = "doc-item";
+            div.innerHTML = `
+              <span>${doc.name} (Supprimé)</span>
+              <button onclick="restoreDoc('${doc.id}')" style="width:auto;">Restaurer</button>
+            `;
+            list.appendChild(div);
+          });
+        }
+      }
+
+      // ============================================================
+      // RESTAURER DEPUIS LA CORBEILLE
+      // Remplace : onValue(trashRef, ...) + set(ref(db, 'documents/'+safeKey), data) + remove(trashRef)
+      // Par      : SELECT corbeille + INSERT documents + DELETE corbeille
+      // ============================================================
+      async function restoreDoc(trashId) {
+        // ✅ ÉTAPE 1 : Lire le document depuis la corbeille
+        const { data: doc, error } = await db
+          .from("deleted_documents")
+          .select("*")
+          .eq("id", trashId)
+          .single();
+
+        if (error || !doc) { showToast("Introuvable dans la corbeille.", "error"); return; }
+
+        // ✅ ÉTAPE 2 : Réinsérer dans la table documents
+        const { error: insertError } = await db.from("documents").insert({
+          name:         doc.name,
+          url:          doc.url,
+          storage_path: doc.storage_path,
+          filieres:     doc.filieres,
+          niveau:       doc.niveau,
+          type:         doc.type,
+          module:       doc.module,
+          annee:        doc.annee
+        });
+
+        if (insertError) { showToast("Erreur restauration : " + insertError.message, "error"); return; }
+
+        // ✅ ÉTAPE 3 : Supprimer de la corbeille
+        await db.from("deleted_documents").delete().eq("id", trashId);
+
+        showToast("Document restauré avec succès.", "success");
+        toggleDeleteHistory(); // Ferme le modal
+        loadAdminFiles();
+      }
+
+      // ============================================================
+      // HISTORIQUE CONNEXIONS
+      // Remplace : onValue(ref(db, 'login_history'), callback)
+      // Par      : db.from('login_history').select('*').order('created_at', desc)
+      // ============================================================
+      async function loadLoginHistory() {
+        const historyList = document.getElementById("loginHistoryList");
+        historyList.innerHTML = "Chargement...";
+
+        const { data, error } = await db
+          .from("login_history")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        historyList.innerHTML = "";
+        if (error) { historyList.innerHTML = "Erreur : " + error.message; return; }
+
+        if (!data || data.length === 0) {
+          historyList.innerHTML = "Aucune connexion enregistrée.";
+          return;
+        }
+
+        data.forEach(entry => {
+          const p = document.createElement("div");
+          p.style.borderBottom = "1px solid #eee";
+          p.textContent = `${new Date(entry.created_at).toLocaleString("fr-FR")} - ${entry.nom} ${entry.prenom} (${entry.filiere})`;
+          historyList.appendChild(p);
+        });
+      }
+
+      // ============================================================
+      // EFFACER L'HISTORIQUE
+      // Remplace : remove(ref(db, 'login_history'))
+      // Par      : db.from('login_history').delete().neq('id', '') → supprime tout
+      // ⚠️  Nécessite que la politique RLS autorise DELETE pour anon
+      // ============================================================
+      async function clearLoginHistory() {
+        if (!confirm("Tout effacer ?")) return;
+
+        // Suppression de toutes les lignes (condition toujours vraie)
+        const { error } = await db
+          .from("login_history")
+          .delete()
+          .not("id", "is", null); // Condition : id n'est pas null = toutes les lignes
+
+        if (error) showToast("Erreur suppression : " + error.message, "error");
+        else { showToast("Historique effacé.", "success"); loadLoginHistory(); }
+      }
+
+      // ============================================================
+      // CHARGER LES ANNÉES UNIQUES POUR LE FILTRE DE RECHERCHE
+      // Remplace : onValue(ref(db, 'documents'), callback) avec Set()
+      // Par      : db.from('documents').select('annee') avec dédoublonnage JS
+      // ============================================================
+      async function loadUniqueYears() {
+        const select = document.getElementById("searchAnnee");
+
+        const { data, error } = await db.from("documents").select("annee");
+
+        if (error || !data) return;
+
+        const years = [...new Set(data.map(d => d.annee))].sort();
+
+        select.innerHTML = '<option value="">Toutes</option>';
+        years.forEach(year => {
+          const opt = document.createElement("option");
+          opt.value = year;
+          opt.textContent = year;
+          select.appendChild(opt);
+        });
+      }
+
+      // ============================================================
+      // RECHERCHE DE DOCUMENTS
+      // Remplace : onValue + filtrage côté client
+      // Par      : requête Supabase avec filtres côté serveur
+      //            (plus performant — évite de tout charger en mémoire)
+      // ============================================================
+      document.getElementById("searchForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const moduleSearch = document.getElementById("searchModule").value.trim();
+
+        // Accès admin depuis la page recherche (code dans le champ module)
+        if (moduleSearch === "1596") {
+          showPage("admin-page");
+          loadLoginHistory();
+          loadAdminFiles();
+          return;
+        }
+
+        const filiere = document.getElementById("searchFiliere").value;
+        const niveau  = document.getElementById("searchNiveau").value;
+        const type    = document.getElementById("searchType").value;
+        const annee   = document.getElementById("searchAnnee").value;
+
+        const resultsList = document.getElementById("resultsList");
+        resultsList.innerHTML = "Recherche en cours...";
+
+        // ✅ Requête Supabase avec filtres serveur (remplace le filtrage côté client Firebase)
+        let query = db
+          .from("documents")
+          .select("*")
+          .contains("filieres", [filiere])    // Équivalent de doc.filieres.includes(filiere)
+          .eq("niveau", niveau)
+          .eq("type", type);
+
+        // Filtre optionnel sur l'année
+        if (annee !== "") query = query.eq("annee", annee);
+
+        // Filtre optionnel sur le module (recherche partielle insensible à la casse)
+        if (moduleSearch !== "") query = query.ilike("module", `%${moduleSearch}%`);
+
+        const { data, error } = await query.order("created_at", { ascending: false });
+
+        resultsList.innerHTML = "";
+
+        if (error) { resultsList.innerHTML = "Erreur : " + error.message; return; }
+
+        if (!data || data.length === 0) {
+          resultsList.innerHTML = "Aucun document trouvé avec ces critères.";
+          return;
+        }
+
+        data.forEach(doc => {
+          const div = document.createElement("div");
+          div.className = "doc-item";
+          div.innerHTML = `
+            <div>
+              <strong>${doc.module}</strong><br />
+              <small>${doc.annee} - ${doc.type}</small>
+            </div>
+            <a href="${doc.url}" target="_blank" style="background:var(--primary-color); color:white; padding:5px 10px; text-decoration:none; border-radius:5px;">Télécharger</a>
+          `;
+          resultsList.appendChild(div);
+        });
+      });
+
+      // Exposer les fonctions au scope global (appelées depuis le HTML via onclick)
+      window.uploadFiles       = uploadFiles;
+      window.editDoc           = editDoc;
+      window.deleteDoc         = deleteDoc;
+      window.toggleDeleteHistory = toggleDeleteHistory;
+      window.restoreDoc        = restoreDoc;
+      window.clearLoginHistory = clearLoginHistory;
+      window.quitAdmin         = quitAdmin;
+      window.logout            = logout;
+      window.changeBackground  = changeBackground;
+    </script>
+  </body>
+</html>

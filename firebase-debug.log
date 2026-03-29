@@ -1,0 +1,23 @@
+[debug] [2026-02-11T22:38:05.196Z] ----------------------------------------------------------------------
+[debug] [2026-02-11T22:38:05.202Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\HP\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init hosting
+[debug] [2026-02-11T22:38:05.203Z] CLI Version:   15.5.1
+[debug] [2026-02-11T22:38:05.203Z] Platform:      win32
+[debug] [2026-02-11T22:38:05.203Z] Node Version:  v24.12.0
+[debug] [2026-02-11T22:38:05.203Z] Time:          Wed Feb 11 2026 22:38:05 GMT+0000 (heure moyenne de Greenwich)
+[debug] [2026-02-11T22:38:05.203Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\HP
+
+Before we get started, keep in mind:
+
+  * You are initializing within an existing Firebase project directory
+
